@@ -356,8 +356,16 @@ def main():
     selected_player = st.selectbox("Select a Player", sorted_df['player'])
     
     # Get selected player data
-    player_data = sorted_df[sorted_df['player'] == selected_player].iloc[0]
+    player_data = sorted_df[sorted_df['player'] == selected_player]
+
+    if player_data.empty:
+        st.error("No data found for the selected player.")
+    
+        return  # Exit the function to prevent further errors
+
+    player_data = player_data.iloc[0]
     player_id = player_data['playerId']
+
     
     # Plot player's half-space actions
     plot_data = plot_player_halfspace_actions(
