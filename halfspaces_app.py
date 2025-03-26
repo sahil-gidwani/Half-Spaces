@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from mplsoccer import Pitch
 import io
 import base64
+import fsspec
 
 # Caching the data loading functions
 @st.cache_data
