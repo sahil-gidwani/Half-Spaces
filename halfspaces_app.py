@@ -76,6 +76,10 @@ def add_carries(_game_df):
 
 @st.cache_data
 def prepare_data(data):
+    if data.empty:
+        st.warning("Empty dataset in prepare_data function")
+        return pd.DataFrame(), pd.DataFrame()
+    
     data = data.copy()
     data['x'] = data['x']*1.2
     data['y'] = data['y']*.8
@@ -116,6 +120,9 @@ def prepare_data(data):
 
 @st.cache_data
 def calculate_progressive_actions(df):
+    if df.empty:
+        return pd.DataFrame()
+    
     df_prog = df.copy()
     df_prog['beginning'] = np.sqrt(np.square(120 - df_prog['x']) + np.square(40 - df_prog['y']))
     df_prog['end'] = np.sqrt(np.square(120 - df_prog['endX']) + np.square(40 - df_prog['endY']))
@@ -124,36 +131,61 @@ def calculate_progressive_actions(df):
 
 @st.cache_data
 def process_halfspace_data(data_passes, data_carries, mins_data):
+    # Extensive logging and error handling
+    if data_passes.empty:
+        st.warning("No passes data found. Check your data filtering.")
+        return pd.DataFrame(), None, None, None, None
+    
+    if data_carries.empty:
+        st.warning("No carries data found. Check your data filtering.")
+        return pd.DataFrame(), None, None, None, None
+
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
     prog_rhs_carries = calculate_progressive_actions(data_carries[data_carries['in_rhs']])
     prog_lhs_carries = calculate_progressive_actions(data_carries[data_carries['in_lhs']])
     
-    prog_rhs_passes_grouped = prog_rhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_passes')
-    prog_lhs_passes_grouped = prog_lhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_passes')
-    prog_rhs_carries_grouped = prog_rhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_carries')
-    prog_lhs_carries_grouped = prog_lhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_carries')
-    
-    prog_result_df_rhs = pd.merge(prog_rhs_passes_grouped, prog_rhs_carries_grouped, on=['playerId', 'player', 'team'], how='outer').fillna(0)
+    try:
+        prog_rhs_passes_grouped = prog_rhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_passes')
+        prog_lhs_passes_grouped = prog_lhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_passes')
+        prog_rhs_carries_grouped = prog_rhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_carries')
+        prog_lhs_carries_grouped = prog_lhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_carries')
+    except Exception as e:
+        st.error(f"Error in grouping data: {e}")
+        return pd.DataFrame(), None, None, None, None
+
+    # Perform merge operations
+    prog_result_df_rhs = pd.merge(prog_rhs_passes_grouped, prog_rhs_carries_grouped, 
+                                   on=['playerId', 'player', 'team'], how='outer').fillna(0)
     prog_result_df_rhs['prog_rhs_actions'] = prog_result_df_rhs['prog_rhs_passes'] + prog_result_df_rhs['prog_rhs_carries']
     
-    prog_result_df_lhs = pd.merge(prog_lhs_passes_grouped, prog_lhs_carries_grouped, on=['playerId', 'player', 'team'], how='outer').fillna(0)
+    prog_result_df_lhs = pd.merge(prog_lhs_passes_grouped, prog_lhs_carries_grouped, 
+                                   on=['playerId', 'player', 'team'], how='outer').fillna(0)
     prog_result_df_lhs['prog_lhs_actions'] = prog_result_df_lhs['prog_lhs_passes'] + prog_result_df_lhs['prog_lhs_carries']
     
-    combined_prog_df = pd.merge(prog_result_df_rhs, prog_result_df_lhs, on=['playerId', 'player', 'team'], how='outer').fillna(0)
+    combined_prog_df = pd.merge(prog_result_df_rhs, prog_result_df_lhs, 
+                                on=['playerId', 'player', 'team'], how='outer').fillna(0)
     combined_prog_df['prog_HS_actions'] = combined_prog_df['prog_rhs_actions'] + combined_prog_df['prog_lhs_actions']
     
-    # Add the column for 90s if it doesn't exist
+    # Validate mins_data
     if '90s' not in mins_data.columns:
         mins_data['90s'] = mins_data['Mins'] / 90
     
-    combined_prog_df = pd.merge(combined_prog_df, mins_data[['player', 'team', '90s', 'position']], 
-                                on=['player', 'team'], how='left')
-    
+    # Merge with mins_data
+    try:
+        combined_prog_df = pd.merge(combined_prog_df, 
+                                    mins_data[['player', 'team', '90s', 'position']], 
+                                    on=['player', 'team'], how='left')
+    except Exception as e:
+        st.error(f"Error merging with minutes data: {e}")
+        return pd.DataFrame(), None, None, None, None
+
+    # Calculate per 90 metrics
     combined_prog_df['prog_act_HS_p90'] = combined_prog_df['prog_HS_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_rhs_act_p90'] = combined_prog_df['prog_rhs_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_lhs_act_p90'] = combined_prog_df['prog_lhs_actions'] / combined_prog_df['90s']
     
+    # Filter out goalkeepers and players with low minutes
     combined_prog_df = combined_prog_df[
         (combined_prog_df['90s'] >= 15) & 
         (combined_prog_df['position'] != 'GK')
@@ -245,6 +277,11 @@ def main():
         "type", "outcomeType", "teamId", "team", "playerId", "player",  
         "x", "y", "endX", "endY"
     ])
+
+    # Enhanced error handling for data loading
+    if data.empty:
+        st.error("Failed to load dataset. Please check your internet connection or the data source.")
+        st.stop()
     
     # Load minutes data with corrected column names
     try:
