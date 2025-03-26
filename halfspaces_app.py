@@ -319,7 +319,7 @@ def main():
     filtered_mins_data = mins_data.copy()
     
     # Prepare league data for merging
-    league_data = filtered_data[['player', 'team', 'league', 'season', 'position']].drop_duplicates()
+    league_data = filtered_data[['player', 'team', 'league', 'season']].drop_duplicates()
     
     # Process halfspace data
     combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries = process_halfspace_data(
