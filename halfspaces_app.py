@@ -243,7 +243,7 @@ def main():
     ])
     
     # Load minutes data
-    mins_data = pd.read_csv("Mins.csv")  # Local CSV file
+    mins_data = pd.read_csv("T5 Leagues Mins 23-24.csv")  # Local CSV file
     
     st.title("Top 5 Leagues Half-Spaces Progressive Actions")
     
