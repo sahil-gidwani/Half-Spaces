@@ -186,10 +186,10 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     combined_prog_df['prog_lhs_act_p90'] = combined_prog_df['prog_lhs_actions'] / combined_prog_df['90s']
     
     # Filter out goalkeepers and players with low minutes
-    #combined_prog_df = combined_prog_df[
-     #   (combined_prog_df['90s'].fillna(0) >= 15) & 
-      #  (combined_prog_df['position'] != 'GK')
-    #]
+    combined_prog_df = combined_prog_df[
+        (combined_prog_df['90s'].fillna(0) >= 15) & 
+        (combined_prog_df['position'] != 'GK')
+    ]
     
     combined_prog_df = combined_prog_df.drop_duplicates(subset=['player'])
     
@@ -357,10 +357,10 @@ def main():
     )
     
     # Additional filtering
-    combined_prog_df = combined_prog_df[
-        (combined_prog_df['90s'] >= selected_90s) & 
-        (combined_prog_df['position'] != 'GK')
-    ]
+    #combined_prog_df = combined_prog_df[
+     #   (combined_prog_df['90s'] >= selected_90s) & 
+      #  (combined_prog_df['position'] != 'GK')
+    #]
     
     # Action Type Selection
     action_type = st.sidebar.radio("Action Type", 
