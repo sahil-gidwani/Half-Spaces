@@ -123,7 +123,7 @@ def calculate_progressive_actions(df):
     return df_prog[df_prog['progressive']]
 
 @st.cache_data
-def process_halfspace_data(data_passes, data_carries, mins_data):
+def process_halfspace_data(data_passes, data_carries, mins_data, league_data):
     # Progressive Actions in Half-Spaces
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
@@ -150,6 +150,12 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     # Add minutes played
     mins_data['90s'] = mins_data['Mins'] / 90
     combined_prog_df = pd.merge(combined_prog_df, mins_data, on=['player', 'team'], how='left')
+    
+    # Add league information from league_data
+    combined_prog_df = pd.merge(combined_prog_df, 
+                                league_data[['player', 'team', 'league', 'season', 'position']].drop_duplicates(), 
+                                on=['player', 'team'], 
+                                how='left')
     
     # Calculate per 90 metrics
     combined_prog_df['prog_act_HS_p90'] = combined_prog_df['prog_HS_actions'] / combined_prog_df['90s']
@@ -265,8 +271,10 @@ def main():
     data = load_data(hf_url, columns = [
         "league", "season", "gameId", "period", "minute", "second", "expandedMinute",  
         "type", "outcomeType", "teamId", "team", "playerId", "player",  
-        "x", "y", "endX", "endY"
+        "x", "y", "endX", "endY", "position"
     ])
+    
+    # Load minutes data
     mins_data = load_data("T5 Leagues Mins 23-24.csv")
     
     # Streamlit App
@@ -282,9 +290,15 @@ def main():
     selected_season = st.sidebar.selectbox("Select Season", seasons)
     selected_league = st.sidebar.selectbox("Select League", leagues)
     
+    # Filter data based on season and league selection
+    filtered_data = data[
+        (data['season'] == selected_season) & 
+        (data['league'] == selected_league)
+    ]
+    
     # 90s Slider
-    min_90s = float(mins_data['90s'].min())
-    max_90s = float(mins_data['90s'].max())
+    min_90s = float(mins_data['Mins'].min() / 90)
+    max_90s = float(mins_data['Mins'].max() / 90)
     default_min_90s = 15.0  # Default minimum 90s
     
     selected_90s = st.sidebar.slider(
@@ -295,12 +309,6 @@ def main():
         step=0.5
     )
     
-    # Filter data based on season and league selection
-    filtered_data = data[
-        (data['season'] == selected_season) & 
-        (data['league'] == selected_league)
-    ]
-    
     # Add carries to the filtered data
     filtered_data = add_carries(filtered_data)
     
@@ -308,25 +316,29 @@ def main():
     data_passes, data_carries = prepare_data(filtered_data)
     
     # Merge data from minutes file based on shared columns (player and team)
-    filtered_mins_data = mins_data[
-        (mins_data['team'].isin(filtered_data['team'].unique())) &
-        (mins_data['player'].isin(filtered_data['player'].unique()))
-    ]
+    filtered_mins_data = mins_data.copy()
+    
+    # Prepare league data for merging
+    league_data = filtered_data[['player', 'team', 'league', 'season', 'position']].drop_duplicates()
     
     # Process halfspace data
     combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries = process_halfspace_data(
-        data_passes, data_carries, filtered_mins_data
+        data_passes, data_carries, filtered_mins_data, league_data
     )
     
-    # Filter players by selected 90s
+    # Filter players by selected 90s and league
     combined_prog_df = combined_prog_df[
         (combined_prog_df['90s'] >= selected_90s) & 
-        (combined_prog_df['position'] != 'GK')
+        (combined_prog_df['league'] == selected_league) &
+        (combined_prog_df['season'] == selected_season)
     ]
     
     # Team selection
-    teams = sorted(combined_prog_df['team'].unique())
-    selected_teams = st.sidebar.multiselect("Select Teams", teams, default=teams)
+    # Filter available teams based on the selected season, league, and 90s played
+    available_teams = sorted(combined_prog_df['team'].unique())
+    
+    # Use multiselect with the filtered teams
+    selected_teams = st.sidebar.multiselect("Select Teams", available_teams, default=available_teams)
     
     # Filtered DataFrame
     filtered_df = combined_prog_df[combined_prog_df['team'].isin(selected_teams)]
