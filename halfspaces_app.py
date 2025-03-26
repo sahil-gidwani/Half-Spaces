@@ -123,7 +123,7 @@ def calculate_progressive_actions(df):
     return df_prog[df_prog['progressive']]
 
 @st.cache_data
-def process_halfspace_data(data_passes, data_carries, mins_data, league_data):
+def process_halfspace_data(data_passes, data_carries, mins_data):
     # Progressive Actions in Half-Spaces
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
@@ -147,55 +147,23 @@ def process_halfspace_data(data_passes, data_carries, mins_data, league_data):
     combined_prog_df = pd.merge(prog_result_df_rhs, prog_result_df_lhs, on=['playerId', 'player', 'team'], how='outer').fillna(0)
     combined_prog_df['prog_HS_actions'] = combined_prog_df['prog_rhs_actions'] + combined_prog_df['prog_lhs_actions']
     
-    # DEBUG: Add print statements to understand data
-    print("League Data Shape:", league_data.shape)
-    print("League Data Columns:", league_data.columns)
-    print("League Data Sample:", league_data.head())
-    
-    print("Minutes Data Shape:", mins_data.shape)
-    print("Minutes Data Columns:", mins_data.columns)
-    print("Minutes Data Sample:", mins_data.head())
-    
-    # Ensure consistent column names and data types
-    mins_data['player'] = mins_data['player'].astype(str)
-    mins_data['team'] = mins_data['team'].astype(str)
-    
-    # More robust merging with minutes data
-    combined_prog_df = pd.merge(
-        combined_prog_df, 
-        mins_data[['player', 'team', 'Mins']].drop_duplicates(), 
-        on=['player', 'team'], 
-        how='left'
-    )
-    
-    # Calculate 90s 
-    combined_prog_df['90s'] = combined_prog_df['Mins'] / 90 if 'Mins' in combined_prog_df.columns else 0
-    
-    # Merge league information more carefully
-    combined_prog_df = pd.merge(
-        combined_prog_df, 
-        league_data[['player', 'team', 'league', 'season']].drop_duplicates(), 
-        on=['player', 'team'], 
-        how='left'
-    )
-    
-    # Print out debugging information
-    print("Combined Prog DF Columns:", combined_prog_df.columns)
-    print("Combined Prog DF Shape:", combined_prog_df.shape)
-    print("Unique Leagues:", combined_prog_df['league'].unique())
-    
-    # Ensure we're not losing data unexpectedly
-    combined_prog_df = combined_prog_df.dropna(subset=['league', 'season'])
+    # Add minutes played
+    mins_data['90s'] = mins_data['Mins'] / 90
+    combined_prog_df = pd.merge(combined_prog_df, mins_data, on=['player', 'team'], how='left')
     
     # Calculate per 90 metrics
     combined_prog_df['prog_act_HS_p90'] = combined_prog_df['prog_HS_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_rhs_act_p90'] = combined_prog_df['prog_rhs_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_lhs_act_p90'] = combined_prog_df['prog_lhs_actions'] / combined_prog_df['90s']
     
-    # Minimum 90s filter
+    # Filter players
     combined_prog_df = combined_prog_df[
-        (combined_prog_df['90s'] >= 15)
+        (combined_prog_df['90s'] >= 15) & 
+        (combined_prog_df['position'] != 'GK')
     ]
+    
+    # Drop duplicates
+    combined_prog_df = combined_prog_df.drop_duplicates(subset=['player'])
     
     return combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries
 
@@ -292,165 +260,129 @@ def main():
     # Set page configuration
     st.set_page_config(page_title="Half-Spaces Progressive Actions", layout="wide")
     
-    # More robust error handling and logging
-    try:
-        # Load the main dataset and minutes data using cached function
-        hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet"
-        data = load_data(hf_url, columns = [
-            "league", "season", "gameId", "period", "minute", "second", "expandedMinute",  
-            "type", "outcomeType", "teamId", "team", "playerId", "player",  
-            "x", "y", "endX", "endY"
-        ])
-        
-        # Load minutes data
-        mins_data = load_data("T5 Leagues Mins 23-24.csv")
-        
-        # DEBUG: Print out initial data information
-        st.sidebar.write(f"Debug: Total data rows: {len(data)}")
-        st.sidebar.write(f"Debug: Available Leagues: {data['league'].unique()}")
-        st.sidebar.write(f"Debug: Available Seasons: {data['season'].unique()}")
-        
-        # Ensure data types are consistent
-        data['league'] = data['league'].astype(str)
-        data['season'] = data['season'].astype(str)
-        
-        # Streamlit App
-        st.title("Top 5 Leagues Half-Spaces Progressive Actions")
-        
-        # Sidebar for filtering
-        st.sidebar.header("Filters")
-        
-        # Season and League Selection
-        seasons = sorted(data['season'].unique())
-        leagues = sorted(data['league'].unique())
-        
-        selected_season = st.sidebar.selectbox("Select Season", seasons)
-        selected_league = st.sidebar.selectbox("Select League", leagues)
-        
-        # Filter data based on season and league selection
-        filtered_data = data[
-            (data['season'] == selected_season) & 
-            (data['league'] == selected_league)
-        ]
-        
-        # 90s Slider
-        min_90s = float(mins_data['Mins'].min() / 90)
-        max_90s = float(mins_data['Mins'].max() / 90)
-        default_min_90s = 15.0  # Default minimum 90s
-        
-        selected_90s = st.sidebar.slider(
-            "Minimum 90s Played", 
-            min_value=min_90s, 
-            max_value=max_90s, 
-            value=default_min_90s, 
-            step=0.5
-        )
-        
-        # Add carries to the filtered data
-        filtered_data = add_carries(filtered_data)
-        
-        # Prepare data for the selected season and league
-        data_passes, data_carries = prepare_data(filtered_data)
-        
-        # Merge data from minutes file based on shared columns (player and team)
-        filtered_mins_data = mins_data.copy()
-        
-        # Prepare league data for merging
-        league_data = filtered_data[['player', 'team', 'league', 'season']].drop_duplicates()
-        
-        # Process halfspace data
-        combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries = process_halfspace_data(
-            data_passes, data_carries, filtered_mins_data, league_data
-        )
-        
-        # Filter players by selected 90s and league
-        combined_prog_df = combined_prog_df[
-            (combined_prog_df['90s'] >= selected_90s) & 
-            (combined_prog_df['league'] == selected_league) &
-            (combined_prog_df['season'] == selected_season)
-        ]
-        
-        # Team selection
-        if len(combined_prog_df) > 0:
-            available_teams = sorted(combined_prog_df['team'].unique())
-            
-            # Use multiselect with the filtered teams
-            selected_teams = st.sidebar.multiselect(
-                "Select Teams", 
-                available_teams, 
-                default=available_teams  # Default to selecting all available teams
-            )
-        else:
-            st.error(f"No data found for {selected_league} in season {selected_season} with {selected_90s}+ 90s played.")
-            return
-        
-        # Filtered DataFrame
-        if selected_teams:
-            filtered_df = combined_prog_df[combined_prog_df['team'].isin(selected_teams)]
-        else:
-            st.error("No teams selected. Please adjust your filters.")
-            return
-        
-        # Half-Space Action Type Selection
-        action_type = st.sidebar.radio("Action Type", 
-                                       ["All Half-Space Actions", 
-                                        "Right Half-Space Actions", 
-                                        "Left Half-Space Actions"])
-        
-        # Sorting and Display
-        if action_type == "Right Half-Space Actions":
-            sorted_df = filtered_df.sort_values("prog_rhs_act_p90", ascending=False)
-        elif action_type == "Left Half-Space Actions":
-            sorted_df = filtered_df.sort_values("prog_lhs_act_p90", ascending=False)
-        else:
-            sorted_df = filtered_df.sort_values("prog_act_HS_p90", ascending=False)
-        
-        st.write("### Half-Space Progressive Actions per 90")
-        
-        # Display top players table
-        display_columns = ['player', 'team', 'prog_act_HS_p90', 'prog_rhs_act_p90', 'prog_lhs_act_p90', '90s']
-        st.dataframe(sorted_df[display_columns], use_container_width=True)
-        
-        # Player Selection for Visualization
-        st.write("### Player Half-Space Actions Visualization")
-        
-        if sorted_df.empty:
-            st.error("No players found. Please adjust your filters.")
-            return
-        
-        selected_player = st.selectbox("Select a Player", sorted_df['player'])
-        
-        # Get selected player data
-        player_data = sorted_df[sorted_df['player'] == selected_player]
+    # Load the main dataset and minutes data using cached function
+    hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet"
+    data = load_data(hf_url, columns = [
+        "league", "season", "gameId", "period", "minute", "second", "expandedMinute",  
+        "type", "outcomeType", "teamId", "team", "playerId", "player",  
+        "x", "y", "endX", "endY"
+    ])
+    mins_data = load_data("T5 Leagues Mins 23-24.csv")
+    
+    # Streamlit App
+    st.title("Top 5 Leagues Half-Spaces Progressive Actions")
+    
+    # Sidebar for filtering
+    st.sidebar.header("Filters")
+    
+    # Season and League Selection
+    seasons = sorted(data['season'].unique())
+    leagues = sorted(data['league'].unique())
+    
+    selected_season = st.sidebar.selectbox("Select Season", seasons)
+    selected_league = st.sidebar.selectbox("Select League", leagues)
+    
+    # 90s Slider
+    min_90s = float(mins_data['90s'].min())
+    max_90s = float(mins_data['90s'].max())
+    default_min_90s = 15.0  # Default minimum 90s
+    
+    selected_90s = st.sidebar.slider(
+        "Minimum 90s Played", 
+        min_value=min_90s, 
+        max_value=max_90s, 
+        value=default_min_90s, 
+        step=0.5
+    )
+    
+    # Filter data based on season and league selection
+    filtered_data = data[
+        (data['season'] == selected_season) & 
+        (data['league'] == selected_league)
+    ]
+    
+    # Add carries to the filtered data
+    filtered_data = add_carries(filtered_data)
+    
+    # Prepare data for the selected season and league
+    data_passes, data_carries = prepare_data(filtered_data)
+    
+    # Merge data from minutes file based on shared columns (player and team)
+    filtered_mins_data = mins_data[
+        (mins_data['team'].isin(filtered_data['team'].unique())) &
+        (mins_data['player'].isin(filtered_data['player'].unique()))
+    ]
+    
+    # Process halfspace data
+    combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries = process_halfspace_data(
+        data_passes, data_carries, filtered_mins_data
+    )
+    
+    # Filter players by selected 90s
+    combined_prog_df = combined_prog_df[
+        (combined_prog_df['90s'] >= selected_90s) & 
+        (combined_prog_df['position'] != 'GK')
+    ]
+    
+    # Team selection
+    teams = sorted(combined_prog_df['team'].unique())
+    selected_teams = st.sidebar.multiselect("Select Teams", teams, default=teams)
+    
+    # Filtered DataFrame
+    filtered_df = combined_prog_df[combined_prog_df['team'].isin(selected_teams)]
+    
+    # Half-Space Action Type Selection
+    action_type = st.sidebar.radio("Action Type", 
+                                   ["All Half-Space Actions", 
+                                    "Right Half-Space Actions", 
+                                    "Left Half-Space Actions"])
+    
+    # Sorting and Display
+    if action_type == "Right Half-Space Actions":
+        sorted_df = filtered_df.sort_values("prog_rhs_act_p90", ascending=False)
+    elif action_type == "Left Half-Space Actions":
+        sorted_df = filtered_df.sort_values("prog_lhs_act_p90", ascending=False)
+    else:
+        sorted_df = filtered_df.sort_values("prog_act_HS_p90", ascending=False)
+    
+    st.write("### Half-Space Progressive Actions per 90")
+    
+    # Display top players table
+    display_columns = ['player', 'team', 'prog_act_HS_p90', 'prog_rhs_act_p90', 'prog_lhs_act_p90', '90s']
+    st.dataframe(sorted_df[display_columns], use_container_width=True)
+    
+    # Player Selection for Visualization
+    st.write("### Player Half-Space Actions Visualization")
+    selected_player = st.selectbox("Select a Player", sorted_df['player'])
+    
+    # Get selected player data
+    player_data = sorted_df[sorted_df['player'] == selected_player]
 
-        if player_data.empty:
-            st.error("No data found for the selected player.")
-            return
-        
-        player_data = player_data.iloc[0]
-        player_id = player_data['playerId']
-        
-        # Plot player's half-space actions
-        plot_data = plot_player_halfspace_actions(
-            player_data, player_id, 
-            prog_rhs_passes, prog_lhs_passes, 
-            prog_rhs_carries, prog_lhs_carries,
-            action_type
-        )
+    if player_data.empty:
+        st.error("No data found for the selected player.")
+    
+        return  # Exit the function to prevent further errors
 
-        with st.sidebar:
-            st.markdown("### Connect with me")
-            st.markdown("- 🐦 [Twitter](https://twitter.com/pranav_m28)")
-            st.markdown("- 🔗 [GitHub](https://github.com/pranavm28)")
-            st.markdown("-Contibute: [BuyMeACoffee](https://buymeacoffee.com/pranav_m28)")
-        
-        # Display plot
-        st.image(f"data:image/png;base64,{plot_data}")
+    player_data = player_data.iloc[0]
+    player_id = player_data['playerId']
 
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
-        import traceback
-        st.error(traceback.format_exc())
+    
+    # Plot player's half-space actions
+    plot_data = plot_player_halfspace_actions(
+        player_data, player_id, 
+        prog_rhs_passes, prog_lhs_passes, 
+        prog_rhs_carries, prog_lhs_carries,
+        action_type
+    )
+
+    with st.sidebar:
+        st.markdown("### Connect with me")
+        st.markdown("- 🐦 [Twitter](https://twitter.com/pranav_m28)")
+        st.markdown("- 🔗 [GitHub](https://github.com/pranavm28)")
+        st.markdown("-Contibute: [BuyMeACoffee](https://buymeacoffee.com/pranav_m28)")
+    
+    # Display plot
+    st.image(f"data:image/png;base64,{plot_data}")
 
 if __name__ == "__main__":
     main()
