@@ -5,5 +5,5 @@ numpy
 matplotlib
 scipy
 mplsoccer
-fsspec
+fsspec==2025.3.0
 huggingface_hub
