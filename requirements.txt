@@ -7,3 +7,5 @@ scipy
 mplsoccer
 fsspec==2025.3.0
 huggingface_hub
+requests
+aiohttp

@@ -6,11 +6,24 @@ from mplsoccer import Pitch
 import io
 import base64
 import fsspec
+import os
+import pyarrow.parquet as pq
 
 # Caching the data loading functions
-@st.cache_data
-def load_data(data_path):
-    return pd.read_csv(data_path, low_memory=False)
+@st.cache_data(ttl=1800, max_entries=2)
+def load_data(data_path: str, columns=None):
+    if data_path.startswith("http"):  # Hugging Face Parquet file
+        with fsspec.open(data_path) as file:
+            df = pd.read_parquet(file, engine="pyarrow", columns=columns)
+    elif data_path.endswith(".csv"):  # Local CSV file
+        df = pd.read_csv(data_path)
+    elif data_path.endswith(".parquet"):  # Local Parquet file
+        df = pd.read_parquet(data_path, engine="pyarrow", columns=columns)
+    else:
+        raise ValueError("Unsupported file format! Only CSV and Parquet are allowed.")
+
+    return df
+    
 
 @st.cache_data
 def add_carries(_game_df):
@@ -248,7 +261,12 @@ def main():
     st.set_page_config(page_title="Half-Spaces Progressive Actions", layout="wide")
     
     # Load the main dataset and minutes data using cached function
-    data = load_data("hf://datasets/pranavm28/Top_5_Leagues_23_24/Top_5_Leagues_23_24.csv")
+    hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet"
+    data = load_data(hf_url, columns = [
+        "league", "season", "gameId", "period", "minute", "second", "expandedMinute",  
+        "type", "outcomeType", "teamId", "team", "playerId", "player",  
+        "x", "y", "endX", "endY"
+    ])
     mins_data = load_data("T5 Leagues Mins 23-24.csv")
     
     # Streamlit App
