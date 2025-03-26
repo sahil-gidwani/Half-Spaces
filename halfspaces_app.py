@@ -308,6 +308,9 @@ def main():
         step=0.5
     )
     
+    # Debug information
+    st.sidebar.write(f"Debug: Total rows for {selected_league} in {selected_season}: {len(filtered_data)}")
+    
     # Add carries to the filtered data
     filtered_data = add_carries(filtered_data)
     
@@ -332,12 +335,15 @@ def main():
         (combined_prog_df['season'] == selected_season)
     ]
     
-    # DEBUG: Print available teams for the current selection
-    st.sidebar.write(f"Debug: Available Teams - {sorted(combined_prog_df['team'].unique())}")
+    # Debug information
+    st.sidebar.write(f"Debug: Total players for {selected_league}: {len(combined_prog_df)}")
     
-    # Team selection with fallback
+    # Team selection
     if len(combined_prog_df) > 0:
         available_teams = sorted(combined_prog_df['team'].unique())
+        
+        # Debug print of available teams
+        st.sidebar.write(f"Debug: Available Teams - {available_teams}")
         
         # Use multiselect with the filtered teams
         selected_teams = st.sidebar.multiselect(
@@ -347,7 +353,6 @@ def main():
         )
     else:
         st.error(f"No data found for {selected_league} in season {selected_season} with {selected_90s}+ 90s played.")
-        selected_teams = []
         return
     
     # Filtered DataFrame
