@@ -130,7 +130,7 @@ def calculate_progressive_actions(df):
     return df_prog[df_prog['progressive']]
 
 @st.cache_data
-def process_halfspace_data(data_passes, data_carries, mins_data, season, league):
+def process_halfspace_data(data_passes, data_carries, mins_data):
     # Extensive logging and error handling
     if data_passes.empty:
         st.warning("No passes data found. Check your data filtering.")
@@ -139,12 +139,6 @@ def process_halfspace_data(data_passes, data_carries, mins_data, season, league)
     if data_carries.empty:
         st.warning("No carries data found. Check your data filtering.")
         return pd.DataFrame(), None, None, None, None
-
-    # Filter minutes data by season and league here
-    mins_data = mins_data[
-        (mins_data['season'] == season) & 
-        (mins_data['league'] == league)
-    ]
 
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
@@ -193,7 +187,7 @@ def process_halfspace_data(data_passes, data_carries, mins_data, season, league)
     
     # Filter out goalkeepers and players with low minutes
     combined_prog_df = combined_prog_df[
-        (combined_prog_df['90s'] >= 15) & 
+        (combined_prog_df['90s'].fillna(0) >= 15) & 
         (combined_prog_df['position'] != 'GK')
     ]
     
