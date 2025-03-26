@@ -153,7 +153,7 @@ def process_halfspace_data(data_passes, data_carries, mins_data, league_data):
     
     # Add league information from league_data
     combined_prog_df = pd.merge(combined_prog_df, 
-                                league_data[['player', 'team', 'league', 'season', 'position']].drop_duplicates(), 
+                                league_data[['player', 'team', 'league', 'season']].drop_duplicates(), 
                                 on=['player', 'team'], 
                                 how='left')
     
@@ -164,8 +164,7 @@ def process_halfspace_data(data_passes, data_carries, mins_data, league_data):
     
     # Filter players
     combined_prog_df = combined_prog_df[
-        (combined_prog_df['90s'] >= 15) & 
-        (combined_prog_df['position'] != 'GK')
+        (combined_prog_df['90s'] >= 15)
     ]
     
     # Drop duplicates
