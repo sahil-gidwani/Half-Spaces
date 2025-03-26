@@ -5,3 +5,5 @@ numpy
 matplotlib
 scipy
 mplsoccer
+fsspec
+huggingface_hub
