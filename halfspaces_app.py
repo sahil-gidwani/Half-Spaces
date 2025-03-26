@@ -271,7 +271,7 @@ def main():
     data = load_data(hf_url, columns = [
         "league", "season", "gameId", "period", "minute", "second", "expandedMinute",  
         "type", "outcomeType", "teamId", "team", "playerId", "player",  
-        "x", "y", "endX", "endY", "position"
+        "x", "y", "endX", "endY"
     ])
     
     # Load minutes data
