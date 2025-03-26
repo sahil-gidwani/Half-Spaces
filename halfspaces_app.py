@@ -7,7 +7,7 @@ import io
 import base64
 import fsspec
 
-@st.cache_data
+@st.cache_data(ttl=1800, max_entries=2)
 def load_data(data_path: str, columns=None):
     try:
         if data_path.startswith("http"):  # Hugging Face Parquet file
@@ -130,7 +130,7 @@ def calculate_progressive_actions(df):
     return df_prog[df_prog['progressive']]
 
 @st.cache_data
-def process_halfspace_data(data_passes, data_carries, mins_data):
+def process_halfspace_data(data_passes, data_carries, mins_data, season, league):
     # Extensive logging and error handling
     if data_passes.empty:
         st.warning("No passes data found. Check your data filtering.")
@@ -139,6 +139,12 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     if data_carries.empty:
         st.warning("No carries data found. Check your data filtering.")
         return pd.DataFrame(), None, None, None, None
+
+    # Filter minutes data by season and league here
+    mins_data = mins_data[
+        (mins_data['season'] == season) & 
+        (mins_data['league'] == league)
+    ]
 
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
