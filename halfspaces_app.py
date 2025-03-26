@@ -143,8 +143,12 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     combined_prog_df = pd.merge(prog_result_df_rhs, prog_result_df_lhs, on=['playerId', 'player', 'team'], how='outer').fillna(0)
     combined_prog_df['prog_HS_actions'] = combined_prog_df['prog_rhs_actions'] + combined_prog_df['prog_lhs_actions']
     
-    mins_data['90s'] = mins_data['Mins'] / 90
-    combined_prog_df = pd.merge(combined_prog_df, mins_data, on=['player', 'team'], how='left')
+    # Add the column for 90s if it doesn't exist
+    if '90s' not in mins_data.columns:
+        mins_data['90s'] = mins_data['Mins'] / 90
+    
+    combined_prog_df = pd.merge(combined_prog_df, mins_data[['player', 'team', '90s', 'position']], 
+                                on=['player', 'team'], how='left')
     
     combined_prog_df['prog_act_HS_p90'] = combined_prog_df['prog_HS_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_rhs_act_p90'] = combined_prog_df['prog_rhs_actions'] / combined_prog_df['90s']
@@ -242,8 +246,20 @@ def main():
         "x", "y", "endX", "endY"
     ])
     
-    # Load minutes data
-    mins_data = pd.read_csv("T5 Leagues Mins 23-24.csv")  # Local CSV file
+    # Load minutes data with corrected column names
+    try:
+        mins_data = pd.read_csv("T5 Leagues Mins 23-24.csv")
+        
+        # Ensure column names are correct
+        if '90s' not in mins_data.columns:
+            mins_data['90s'] = mins_data['Mins'] / 90
+        
+        # Ensure position column exists
+        if 'position' not in mins_data.columns:
+            mins_data['position'] = 'Unknown'
+    except Exception as e:
+        st.error(f"Error loading minutes data: {e}")
+        st.stop()
     
     st.title("Top 5 Leagues Half-Spaces Progressive Actions")
     
@@ -269,8 +285,8 @@ def main():
     )
     
     # 90s Slider
-    min_90s = float(mins_data['Mins'].min() / 90)
-    max_90s = float(mins_data['Mins'].max() / 90)
+    min_90s = float(mins_data['90s'].min())
+    max_90s = float(mins_data['90s'].max())
     
     selected_90s = st.sidebar.slider(
         "Minimum 90s Played", 
@@ -329,34 +345,39 @@ def main():
     
     # Player Selection for Visualization
     st.write("### Player Half-Space Actions Visualization")
-    selected_player = st.selectbox("Select a Player", sorted_df['player'])
     
-    # Get selected player data
-    player_data = sorted_df[sorted_df['player'] == selected_player]
-
-    if not player_data.empty:
-        player_data = player_data.iloc[0]
-        player_id = player_data['playerId']
+    # Check if there are players to select
+    if not sorted_df.empty:
+        selected_player = st.selectbox("Select a Player", sorted_df['player'])
         
-        # Plot player's half-space actions
-        plot_data = plot_player_halfspace_actions(
-            player_data, player_id, 
-            prog_rhs_passes, prog_lhs_passes, 
-            prog_rhs_carries, prog_lhs_carries,
-            action_type
-        )
+        # Get selected player data
+        player_data = sorted_df[sorted_df['player'] == selected_player]
 
-        # Social Links
-        with st.sidebar:
-            st.markdown("### Connect with me")
-            st.markdown("- 🐦 [Twitter](https://twitter.com/pranav_m28)")
-            st.markdown("- 🔗 [GitHub](https://github.com/pranavm28)")
-            st.markdown("-Contribute: [BuyMeACoffee](https://buymeacoffee.com/pranav_m28)")
-        
-        # Display plot
-        st.image(f"data:image/png;base64,{plot_data}")
+        if not player_data.empty:
+            player_data = player_data.iloc[0]
+            player_id = player_data['playerId']
+            
+            # Plot player's half-space actions
+            plot_data = plot_player_halfspace_actions(
+                player_data, player_id, 
+                prog_rhs_passes, prog_lhs_passes, 
+                prog_rhs_carries, prog_lhs_carries,
+                action_type
+            )
+
+            # Social Links
+            with st.sidebar:
+                st.markdown("### Connect with me")
+                st.markdown("- 🐦 [Twitter](https://twitter.com/pranav_m28)")
+                st.markdown("- 🔗 [GitHub](https://github.com/pranavm28)")
+                st.markdown("-Contribute: [BuyMeACoffee](https://buymeacoffee.com/pranav_m28)")
+            
+            # Display plot
+            st.image(f"data:image/png;base64,{plot_data}")
+        else:
+            st.error("No data found for the selected player.")
     else:
-        st.error("No data found for the selected player.")
+        st.error("No players found matching the current filters.")
 
 if __name__ == "__main__":
     main()
