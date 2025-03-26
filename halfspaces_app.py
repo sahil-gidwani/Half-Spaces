@@ -332,15 +332,32 @@ def main():
         (combined_prog_df['season'] == selected_season)
     ]
     
-    # Team selection
-    # Filter available teams based on the selected season, league, and 90s played
-    available_teams = sorted(combined_prog_df['team'].unique())
+    # DEBUG: Print available teams for the current selection
+    st.sidebar.write(f"Debug: Available Teams - {sorted(combined_prog_df['team'].unique())}")
     
-    # Use multiselect with the filtered teams
-    selected_teams = st.sidebar.multiselect("Select Teams", available_teams, default=available_teams)
+    # Team selection with fallback
+    if len(combined_prog_df) > 0:
+        available_teams = sorted(combined_prog_df['team'].unique())
+        
+        # Use multiselect with the filtered teams
+        selected_teams = st.sidebar.multiselect(
+            "Select Teams", 
+            available_teams, 
+            default=available_teams  # Default to selecting all available teams
+        )
+    else:
+        st.error(f"No data found for {selected_league} in season {selected_season} with {selected_90s}+ 90s played.")
+        selected_teams = []
+        return
     
     # Filtered DataFrame
-    filtered_df = combined_prog_df[combined_prog_df['team'].isin(selected_teams)]
+    if selected_teams:
+        filtered_df = combined_prog_df[combined_prog_df['team'].isin(selected_teams)]
+    else:
+        st.error("No teams selected. Please adjust your filters.")
+        return
+    
+    # Rest of the code remains the same...
     
     # Half-Space Action Type Selection
     action_type = st.sidebar.radio("Action Type", 
@@ -364,6 +381,11 @@ def main():
     
     # Player Selection for Visualization
     st.write("### Player Half-Space Actions Visualization")
+    
+    if sorted_df.empty:
+        st.error("No players found. Please adjust your filters.")
+        return
+    
     selected_player = st.selectbox("Select a Player", sorted_df['player'])
     
     # Get selected player data
@@ -371,12 +393,10 @@ def main():
 
     if player_data.empty:
         st.error("No data found for the selected player.")
+        return
     
-        return  # Exit the function to prevent further errors
-
     player_data = player_data.iloc[0]
     player_id = player_data['playerId']
-
     
     # Plot player's half-space actions
     plot_data = plot_player_halfspace_actions(
