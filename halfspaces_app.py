@@ -174,11 +174,11 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     # Merge with mins_data
     try:
         combined_prog_df['player'] = combined_prog_df['player'].str.strip().str.upper()
-        mins_data['player'] = mins_data['player'].str.strip().str.upper()
+        mins_data.loc[:, 'player'] = mins_data['player'].str.strip().str.upper()
 
 # Clean team names as well for good measure
         combined_prog_df['team'] = combined_prog_df['team'].str.strip().str.upper()
-        mins_data['team'] = mins_data['team'].str.strip().str.upper()
+        mins_data.loc[:, 'team'] = mins_data['team'].str.strip().str.upper()
 
 # Then perform the merge
         combined_prog_df = pd.merge(combined_prog_df, 
