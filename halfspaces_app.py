@@ -7,7 +7,7 @@ import io
 import base64
 import fsspec
 
-@st.cache_data(ttl=1800)
+@st.cache_data
 def load_data(data_path: str, columns=None):
     try:
         if data_path.startswith("http"):  # Hugging Face Parquet file
@@ -24,7 +24,7 @@ def load_data(data_path: str, columns=None):
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-#@st.cache_data
+@st.cache_data
 def add_carries(_game_df):
     game_df = _game_df.copy()
     game_df['time_seconds'] = game_df['minute']*60+game_df['second']
@@ -76,10 +76,6 @@ def add_carries(_game_df):
 
 @st.cache_data
 def prepare_data(data):
-    if data.empty:
-        st.warning("Empty dataset in prepare_data function")
-        return pd.DataFrame(), pd.DataFrame()
-    
     data = data.copy()
     data['x'] = data['x']*1.2
     data['y'] = data['y']*.8
@@ -120,83 +116,46 @@ def prepare_data(data):
 
 @st.cache_data
 def calculate_progressive_actions(df):
-    if df.empty:
-        return pd.DataFrame()
-    
     df_prog = df.copy()
     df_prog['beginning'] = np.sqrt(np.square(120 - df_prog['x']) + np.square(40 - df_prog['y']))
     df_prog['end'] = np.sqrt(np.square(120 - df_prog['endX']) + np.square(40 - df_prog['endY']))
     df_prog['progressive'] = (df_prog['end'] / df_prog['beginning']) < 0.75
     return df_prog[df_prog['progressive']]
 
-#@st.cache_data
+@st.cache_data
 def process_halfspace_data(data_passes, data_carries, mins_data):
-    # Extensive logging and error handling
-    if data_passes.empty:
-        st.warning("No passes data found. Check your data filtering.")
-        return pd.DataFrame(), None, None, None, None
-    
-    if data_carries.empty:
-        st.warning("No carries data found. Check your data filtering.")
-        return pd.DataFrame(), None, None, None, None
-
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
     prog_rhs_carries = calculate_progressive_actions(data_carries[data_carries['in_rhs']])
     prog_lhs_carries = calculate_progressive_actions(data_carries[data_carries['in_lhs']])
     
-    try:
-        prog_rhs_passes_grouped = prog_rhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_passes')
-        prog_lhs_passes_grouped = prog_lhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_passes')
-        prog_rhs_carries_grouped = prog_rhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_carries')
-        prog_lhs_carries_grouped = prog_lhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_carries')
-    except Exception as e:
-        st.error(f"Error in grouping data: {e}")
-        return pd.DataFrame(), None, None, None, None
-
-    # Perform merge operations
-    prog_result_df_rhs = pd.merge(prog_rhs_passes_grouped, prog_rhs_carries_grouped, 
-                                   on=['playerId', 'player', 'team'], how='outer').fillna(0)
+    prog_rhs_passes_grouped = prog_rhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_passes')
+    prog_lhs_passes_grouped = prog_lhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_passes')
+    prog_rhs_carries_grouped = prog_rhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_carries')
+    prog_lhs_carries_grouped = prog_lhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_carries')
+    
+    prog_result_df_rhs = pd.merge(prog_rhs_passes_grouped, prog_rhs_carries_grouped, on=['playerId', 'player', 'team'], how='outer').fillna(0)
     prog_result_df_rhs['prog_rhs_actions'] = prog_result_df_rhs['prog_rhs_passes'] + prog_result_df_rhs['prog_rhs_carries']
     
-    prog_result_df_lhs = pd.merge(prog_lhs_passes_grouped, prog_lhs_carries_grouped, 
-                                   on=['playerId', 'player', 'team'], how='outer').fillna(0)
+    prog_result_df_lhs = pd.merge(prog_lhs_passes_grouped, prog_lhs_carries_grouped, on=['playerId', 'player', 'team'], how='outer').fillna(0)
     prog_result_df_lhs['prog_lhs_actions'] = prog_result_df_lhs['prog_lhs_passes'] + prog_result_df_lhs['prog_lhs_carries']
     
-    combined_prog_df = pd.merge(prog_result_df_rhs, prog_result_df_lhs, 
-                                on=['playerId', 'player', 'team'], how='outer').fillna(0)
+    combined_prog_df = pd.merge(prog_result_df_rhs, prog_result_df_lhs, on=['playerId', 'player', 'team'], how='outer').fillna(0)
     combined_prog_df['prog_HS_actions'] = combined_prog_df['prog_rhs_actions'] + combined_prog_df['prog_lhs_actions']
     
-    # Validate mins_data
+    # Add the column for 90s if it doesn't exist
     if '90s' not in mins_data.columns:
         mins_data['90s'] = mins_data['Mins'] / 90
     
-    # Merge with mins_data
-    try:
-        combined_prog_df['player'] = combined_prog_df['player'].str.strip().str.upper()
-        mins_data.loc[:, 'player'] = mins_data['player'].str.strip().str.upper()
-
-# Clean team names as well for good measure
-        combined_prog_df['team'] = combined_prog_df['team'].str.strip().str.upper()
-        mins_data.loc[:, 'team'] = mins_data['team'].str.strip().str.upper()
-
-# Then perform the merge
-        combined_prog_df = pd.merge(combined_prog_df, 
-                             mins_data[['player', 'team', '90s', 'position']], 
-                             on=['player', 'team'], 
-                             how='left')
-    except Exception as e:
-        st.error(f"Error merging with minutes data: {e}")
-        return pd.DataFrame(), None, None, None, None
-
-    # Calculate per 90 metrics
+    combined_prog_df = pd.merge(combined_prog_df, mins_data[['player', 'team', '90s', 'position']], 
+                                on=['player', 'team'], how='left')
+    
     combined_prog_df['prog_act_HS_p90'] = combined_prog_df['prog_HS_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_rhs_act_p90'] = combined_prog_df['prog_rhs_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_lhs_act_p90'] = combined_prog_df['prog_lhs_actions'] / combined_prog_df['90s']
     
-    # Filter out goalkeepers and players with low minutes
     combined_prog_df = combined_prog_df[
-        (combined_prog_df['90s'].fillna(0) >= 15) & 
+        (combined_prog_df['90s'] >= 15) & 
         (combined_prog_df['position'] != 'GK')
     ]
     
@@ -265,7 +224,7 @@ def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_
     else:
         title = f'{player_data["player"]} - Half-Space Progressive Actions\nTotal Half-Space Actions p90: {player_data["prog_act_HS_p90"]:.2f}'
     
-    ax.set_title(title, fontsize=24, color='white', fontweight='bold')
+    ax.set_title(title, fontsize=28, color='white', fontweight='bold')
     
     buffer = io.BytesIO()
     plt.tight_layout()
@@ -286,11 +245,6 @@ def main():
         "type", "outcomeType", "teamId", "team", "playerId", "player",  
         "x", "y", "endX", "endY"
     ])
-
-    # Enhanced error handling for data loading
-    if data.empty:
-        st.error("Failed to load dataset. Please check your internet connection or the data source.")
-        st.stop()
     
     # Load minutes data with corrected column names
     try:
@@ -310,6 +264,10 @@ def main():
     st.title("Top 5 Leagues Half-Spaces Progressive Actions")
     
     st.sidebar.header("Filters")
+
+     # Store previous league selection in session state
+    if 'previous_league' not in st.session_state:
+        st.session_state.previous_league = None # Initialize
     
     # Season and League Selection
     seasons = sorted(data['season'].unique())
@@ -317,6 +275,17 @@ def main():
     
     selected_season = st.sidebar.selectbox("Select Season", seasons)
     selected_league = st.sidebar.selectbox("Select League", leagues)
+
+    # *** Check if the league has changed ***
+    if selected_league != st.session_state.previous_league:
+        st.write(f"League changed from {st.session_state.previous_league} to {selected_league}. Clearing caches.")
+        # Clear caches associated with functions that depend on filtered data
+        add_carries.clear()
+        prepare_data.clear() # Might need clearing too if its input changes significantly
+        process_halfspace_data.clear()
+        calculate_progressive_actions.clear() # Clear this too for safety
+        # Update the previous league in state
+        st.session_state.previous_league = selected_league
     
     # Filter teams dynamically based on selected league and season
     league_teams = sorted(data[
@@ -348,7 +317,18 @@ def main():
         (data['league'] == selected_league) &
         (data['team'].isin(selected_teams))
     ]
-    
+
+    #st.write(f"DEBUG: Shape of filtered_data: {filtered_data.shape}") # Add check
+
+    # --- Call cached functions ---
+    # Need to ensure these functions are defined *before* main()
+    # or imported correctly for .clear() to work.
+
+    if filtered_data.empty:
+         st.warning(f"No event data found for {selected_league} / selected teams.")
+         # Handle empty state gracefully, maybe skip processing
+         st.stop()
+
     # Add carries to the filtered data
     filtered_data = add_carries(filtered_data)
     
