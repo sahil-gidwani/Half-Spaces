@@ -253,7 +253,7 @@ def main():
     st.set_page_config(page_title="Half-Spaces Progressive Actions", layout="wide")
     
     # Load main dataset
-    hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet"
+    hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/optimized_event_data.parquet"
     data = load_data(hf_url, columns=[
         "league", "season", "gameId", "period", "minute", "second", "expandedMinute",  
         "type", "outcomeType", "teamId", "team", "playerId", "player",  
