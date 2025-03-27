@@ -7,7 +7,7 @@ import io
 import base64
 import fsspec
 
-@st.cache_data(key=lambda data_path, columns: f"load_data_{data_path}_{hash(tuple(columns))}")
+@st.cache_data(persist="disk")
 def load_data(data_path: str, columns=None):
     try:
         if data_path.startswith("http"):  # Hugging Face Parquet file
@@ -24,7 +24,7 @@ def load_data(data_path: str, columns=None):
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-@st.cache_data(key=lambda data_path, columns: f"load_data_{data_path}_{hash(tuple(columns))}")
+@st.cache_data(persist="disk")
 def add_carries(_game_df):
     game_df = _game_df.copy()
     game_df['time_seconds'] = game_df['minute']*60+game_df['second']
@@ -74,7 +74,7 @@ def add_carries(_game_df):
     game_df['action_id'] = range(len(game_df))
     return game_df
 
-@st.cache_data(key=lambda data_path, columns: f"load_data_{data_path}_{hash(tuple(columns))}")
+@st.cache_data(persist="disk")
 def prepare_data(data):
     data = data.copy()
     data['x'] = data['x']*1.2
@@ -122,7 +122,7 @@ def calculate_progressive_actions(df):
     df_prog['progressive'] = (df_prog['end'] / df_prog['beginning']) < 0.75
     return df_prog[df_prog['progressive']]
 
-@st.cache_data(key=lambda data_path, columns: f"load_data_{data_path}_{hash(tuple(columns))}")
+@st.cache_data(persist="disk")
 def process_halfspace_data(data_passes, data_carries, mins_data):
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
@@ -177,7 +177,7 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     
     return combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries
 
-@st.cache_data(key=lambda data_path, columns: f"load_data_{data_path}_{hash(tuple(columns))}")
+@st.cache_data(persist="disk")
 def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_lhs_passes, 
                                    prog_rhs_carries, prog_lhs_carries, action_type):
     fig, ax = plt.subplots(figsize=(15, 10), facecolor='#1e1e1e')
