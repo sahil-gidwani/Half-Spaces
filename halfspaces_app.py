@@ -147,8 +147,22 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     if '90s' not in mins_data.columns:
         mins_data['90s'] = mins_data['Mins'] / 90
     
-    combined_prog_df = pd.merge(combined_prog_df, mins_data[['player', 'team', '90s', 'position']], 
-                                on=['player', 'team'], how='left')
+    try:
+        combined_prog_df['player'] = combined_prog_df['player'].str.strip().str.upper()
+        mins_data.loc[:, 'player'] = mins_data['player'].str.strip().str.upper()
+
+# Clean team names as well for good measure
+        combined_prog_df['team'] = combined_prog_df['team'].str.strip().str.upper()
+        mins_data.loc[:, 'team'] = mins_data['team'].str.strip().str.upper()
+
+# Then perform the merge
+        combined_prog_df = pd.merge(combined_prog_df, 
+                             mins_data[['player', 'team', '90s', 'position']], 
+                             on=['player', 'team'], 
+                             how='left')
+    except Exception as e:
+        st.error(f"Error merging with minutes data: {e}")
+        return pd.DataFrame(), None, None, None, None
     
     combined_prog_df['prog_act_HS_p90'] = combined_prog_df['prog_HS_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_rhs_act_p90'] = combined_prog_df['prog_rhs_actions'] / combined_prog_df['90s']
@@ -318,7 +332,7 @@ def main():
         (data['team'].isin(selected_teams))
     ]
 
-    #st.write(f"DEBUG: Shape of filtered_data: {filtered_data.shape}") # Add check
+    st.write(f"DEBUG: Shape of filtered_data: {filtered_data.shape}") # Add check
 
     # --- Call cached functions ---
     # Need to ensure these functions are defined *before* main()
