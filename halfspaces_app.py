@@ -6,6 +6,7 @@ from mplsoccer import Pitch
 import io
 import base64
 import fsspec
+import polars as pl
 
 @st.cache_data(persist='disk')
 def load_data(data_path: str, columns=None):
@@ -115,68 +116,50 @@ def prepare_data(data):
     return data_passes, data_carries
 
 @st.cache_data
-def calculate_progressive_actions(df):
-    df_prog = df.copy()
-    df_prog['beginning'] = np.sqrt(np.square(120 - df_prog['x']) + np.square(40 - df_prog['y']))
-    df_prog['end'] = np.sqrt(np.square(120 - df_prog['endX']) + np.square(40 - df_prog['endY']))
-    df_prog['progressive'] = (df_prog['end'] / df_prog['beginning']) < 0.75
-    return df_prog[df_prog['progressive']]
+def calculate_prog_polars(df: pl.DataFrame) -> pl.DataFrame:
+    if df.is_empty():
+        return pl.DataFrame([])
+    
+    df = df.with_columns(
+        (pl.col('end_x') - pl.col('beginning_x')).alias('progressive_x'),
+        (pl.col('end_y') - pl.col('beginning_y')).alias('progressive_y')
+    )
+    
+    df = df.with_columns(
+        (pl.col('progressive_x').abs() + pl.col('progressive_y').abs()).alias('progressive_distance')
+    )
+    
+    df = df.filter(pl.col('progressive_distance') > 0)
+    
+    return df
 
-@st.cache_data(ttl=3600, max_entries=10)
-def process_halfspace_data(data_passes, data_carries, mins_data):
-    prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
-    prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
-    prog_rhs_carries = calculate_progressive_actions(data_carries[data_carries['in_rhs']])
-    prog_lhs_carries = calculate_progressive_actions(data_carries[data_carries['in_lhs']])
-    
-    prog_rhs_passes_grouped = prog_rhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_passes')
-    prog_lhs_passes_grouped = prog_lhs_passes.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_passes')
-    prog_rhs_carries_grouped = prog_rhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_rhs_carries')
-    prog_lhs_carries_grouped = prog_lhs_carries.groupby(['playerId', 'player', 'team']).size().reset_index(name='prog_lhs_carries')
-    
-    prog_result_df_rhs = pd.merge(prog_rhs_passes_grouped, prog_rhs_carries_grouped, on=['playerId', 'player', 'team'], how='outer').fillna(0)
-    prog_result_df_rhs['prog_rhs_actions'] = prog_result_df_rhs['prog_rhs_passes'] + prog_result_df_rhs['prog_rhs_carries']
-    
-    prog_result_df_lhs = pd.merge(prog_lhs_passes_grouped, prog_lhs_carries_grouped, on=['playerId', 'player', 'team'], how='outer').fillna(0)
-    prog_result_df_lhs['prog_lhs_actions'] = prog_result_df_lhs['prog_lhs_passes'] + prog_result_df_lhs['prog_lhs_carries']
-    
-    combined_prog_df = pd.merge(prog_result_df_rhs, prog_result_df_lhs, on=['playerId', 'player', 'team'], how='outer').fillna(0)
-    combined_prog_df['prog_HS_actions'] = combined_prog_df['prog_rhs_actions'] + combined_prog_df['prog_lhs_actions']
-    
-    # Add the column for 90s if it doesn't exist
-    if '90s' not in mins_data.columns:
-        mins_data['90s'] = mins_data['Mins'] / 90
-    
-    try:
-        combined_prog_df['player'] = combined_prog_df['player'].str.strip().str.upper()
-        mins_data.loc[:, 'player'] = mins_data['player'].str.strip().str.upper()
+df_prog = calculate_prog_polars(df)
 
-# Clean team names as well for good measure
-        combined_prog_df['team'] = combined_prog_df['team'].str.strip().str.upper()
-        mins_data.loc[:, 'team'] = mins_data['team'].str.strip().str.upper()
+if not df_prog.is_empty():
+    pl_mins = pl.read_csv("T5 Leagues Mins 23-24.csv")
+    df_prog = df_prog.groupby(["player", "team"]).agg(
+        pl.col("progressive_distance").sum().alias("total_prog_distance"),
+        pl.count().alias("total_prog_actions")
+    )
+    
+    df_prog = df_prog.join(pl_mins, on=["player", "team"], how="left")
+    
+    df_prog = df_prog.with_columns(
+        (pl.col("total_prog_actions") / pl.col("90s")).alias("prog_actions_p90")
+    )
+    
+    df_prog = df_prog.with_columns(
+        pl.when(pl.col("prog_actions_p90").is_null())
+        .then(0.0)
+        .otherwise(pl.col("prog_actions_p90"))
+        .alias("prog_actions_p90")
+    )
+    
+    final_pl_df = df_prog.to_pandas()
+else:
+    final_pl_df = pd.DataFrame([])
 
-# Then perform the merge
-        combined_prog_df = pd.merge(combined_prog_df, 
-                             mins_data[['player', 'team', '90s', 'position']], 
-                             on=['player', 'team'], 
-                             how='left')
-    except Exception as e:
-        st.error(f"Error merging with minutes data: {e}")
-        return pd.DataFrame(), None, None, None, None
     
-    combined_prog_df['prog_act_HS_p90'] = combined_prog_df['prog_HS_actions'] / combined_prog_df['90s']
-    combined_prog_df['prog_rhs_act_p90'] = combined_prog_df['prog_rhs_actions'] / combined_prog_df['90s']
-    combined_prog_df['prog_lhs_act_p90'] = combined_prog_df['prog_lhs_actions'] / combined_prog_df['90s']
-    
-    combined_prog_df = combined_prog_df[
-        (combined_prog_df['90s'] >= 15) & 
-        (combined_prog_df['position'] != 'GK')
-    ]
-    
-    combined_prog_df = combined_prog_df.drop_duplicates(subset=['player'])
-    
-    return combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries
-
 @st.cache_data(ttl=3600, max_entries=10)
 def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_lhs_passes, 
                                    prog_rhs_carries, prog_lhs_carries, action_type):
