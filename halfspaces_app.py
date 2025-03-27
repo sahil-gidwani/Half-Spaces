@@ -265,7 +265,7 @@ def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_
     else:
         title = f'{player_data["player"]} - Half-Space Progressive Actions\nTotal Half-Space Actions p90: {player_data["prog_act_HS_p90"]:.2f}'
     
-    ax.set_title(title, fontsize=28, color='white', fontweight='bold')
+    ax.set_title(title, fontsize=24, color='white', fontweight='bold')
     
     buffer = io.BytesIO()
     plt.tight_layout()
