@@ -7,7 +7,7 @@ import io
 import base64
 import fsspec
 
-@st.cache_data(ttl=1800, max_entries=10)
+@st.cache_data(persists='disk')
 def load_data(data_path: str, columns=None):
     try:
         if data_path.startswith("http"):  # Hugging Face Parquet file
@@ -74,7 +74,7 @@ def add_carries(_game_df):
     game_df['action_id'] = range(len(game_df))
     return game_df
 
-@st.cache_data(ttl=1800, max_entries=10)
+@st.cache_data(ttl=3600, max_entries=10)
 def prepare_data(data):
     data = data.copy()
     data['x'] = data['x']*1.2
@@ -122,7 +122,7 @@ def calculate_progressive_actions(df):
     df_prog['progressive'] = (df_prog['end'] / df_prog['beginning']) < 0.75
     return df_prog[df_prog['progressive']]
 
-@st.cache_data(ttl=1800, max_entries=10)
+@st.cache_data(ttl=3600, max_entries=10)
 def process_halfspace_data(data_passes, data_carries, mins_data):
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
