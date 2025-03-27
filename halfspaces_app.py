@@ -7,7 +7,7 @@ import io
 import base64
 import fsspec
 
-@st.cache_data(persists='disk')
+@st.cache_data(persist='disk')
 def load_data(data_path: str, columns=None):
     try:
         if data_path.startswith("http"):  # Hugging Face Parquet file
