@@ -168,8 +168,8 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     combined_prog_df['prog_HS_actions'] = combined_prog_df['prog_rhs_actions'] + combined_prog_df['prog_lhs_actions']
     
     # Validate mins_data
-    if '90s' not in mins_data.columns:
-        mins_data['90s'] = mins_data['Mins'] / 90
+    #if '90s' not in mins_data.columns:
+     #   mins_data['90s'] = mins_data['Mins'] / 90
     
     # Merge with mins_data
     try:
@@ -288,8 +288,8 @@ def main():
         mins_data = pd.read_csv("T5 Leagues Mins 23-24.csv")
         
         # Ensure column names are correct
-        if '90s' not in mins_data.columns:
-            mins_data['90s'] = mins_data['Mins'] / 90
+        #if '90s' not in mins_data.columns:
+         #   mins_data['90s'] = mins_data['Mins'] / 90
         
         # Ensure position column exists
         if 'position' not in mins_data.columns:
@@ -357,10 +357,10 @@ def main():
     )
     
     # Additional filtering
-    #combined_prog_df = combined_prog_df[
-     #   (combined_prog_df['90s'] >= selected_90s) & 
-      #  (combined_prog_df['position'] != 'GK')
-    #]
+    combined_prog_df = combined_prog_df[
+        (combined_prog_df['90s'] >= selected_90s) & 
+        (combined_prog_df['position'] != 'GK')
+    ]
     
     # Action Type Selection
     action_type = st.sidebar.radio("Action Type", 
