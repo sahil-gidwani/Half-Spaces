@@ -7,7 +7,7 @@ import io
 import base64
 import fsspec
 
-#@st.cache_data(ttl=1800, max_entries=2)
+@st.cache_data(ttl=1800, max_entries=2)
 def load_data(data_path: str, columns=None):
     try:
         if data_path.startswith("http"):  # Hugging Face Parquet file
@@ -74,7 +74,7 @@ def add_carries(_game_df):
     game_df['action_id'] = range(len(game_df))
     return game_df
 
-#@st.cache_data
+@st.cache_data
 def prepare_data(data):
     if data.empty:
         st.warning("Empty dataset in prepare_data function")
@@ -118,7 +118,7 @@ def prepare_data(data):
     
     return data_passes, data_carries
 
-#@st.cache_data
+@st.cache_data
 def calculate_progressive_actions(df):
     if df.empty:
         return pd.DataFrame()
@@ -204,7 +204,7 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     
     return combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries
 
-#@st.cache_data
+@st.cache_data
 def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_lhs_passes, 
                                    prog_rhs_carries, prog_lhs_carries, action_type):
     fig, ax = plt.subplots(figsize=(15, 10), facecolor='#1e1e1e')
