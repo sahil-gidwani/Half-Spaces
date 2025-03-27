@@ -174,8 +174,8 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     # Merge with mins_data
     try:
         combined_prog_df = pd.merge(combined_prog_df, 
-                                    mins_data[['player', 'team', '90s', 'league']], 
-                                    on=['player', 'team'], how='left')
+                                    mins_data[['player', 'team', '90s', 'position', 'league']], 
+                                    on=['player', 'team', 'league'], how='left')
     except Exception as e:
         st.error(f"Error merging with minutes data: {e}")
         return pd.DataFrame(), None, None, None, None
