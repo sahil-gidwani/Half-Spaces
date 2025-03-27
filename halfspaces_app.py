@@ -7,7 +7,7 @@ import io
 import base64
 import fsspec
 
-@st.cache_data(persist='disk')
+@st.cache_data(persists='disk')
 def load_data(data_path: str, columns=None):
     try:
         if data_path.startswith("http"):  # Hugging Face Parquet file
@@ -177,7 +177,7 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     
     return combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries
 
-@st.cache_data(persist="disk")
+@st.cache_data(ttl=3600, max_entries=10)
 def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_lhs_passes, 
                                    prog_rhs_carries, prog_lhs_carries, action_type):
     fig, ax = plt.subplots(figsize=(15, 10), facecolor='#1e1e1e')
@@ -253,7 +253,7 @@ def main():
     st.set_page_config(page_title="Half-Spaces Progressive Actions", layout="wide")
     
     # Load main dataset
-    hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/optimized_event_data.parquet"
+    hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet"
     data = load_data(hf_url, columns=[
         "league", "season", "gameId", "period", "minute", "second", "expandedMinute",  
         "type", "outcomeType", "teamId", "team", "playerId", "player",  
