@@ -6,6 +6,7 @@ from mplsoccer import Pitch
 import io
 import base64
 import fsspec
+import polars as pl
 
 @st.cache_data(persist='disk')
 def load_data(data_path: str, columns=None):
