@@ -7,7 +7,7 @@ import io
 import base64
 import fsspec
 
-@st.cache_data(persist='disk')
+@st.cache_data
 def load_data(data_path: str, columns=None):
     try:
         if data_path.startswith("http"):  # Hugging Face Parquet file
@@ -24,7 +24,7 @@ def load_data(data_path: str, columns=None):
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-@st.cache_data(persist="disk")
+@st.cache_data
 def add_carries(_game_df):
     game_df = _game_df.copy()
     game_df['time_seconds'] = game_df['minute']*60+game_df['second']
@@ -74,7 +74,7 @@ def add_carries(_game_df):
     game_df['action_id'] = range(len(game_df))
     return game_df
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data
 def prepare_data(data):
     data = data.copy()
     data['x'] = data['x']*1.2
@@ -122,7 +122,7 @@ def calculate_progressive_actions(df):
     df_prog['progressive'] = (df_prog['end'] / df_prog['beginning']) < 0.75
     return df_prog[df_prog['progressive']]
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data
 def process_halfspace_data(data_passes, data_carries, mins_data):
     prog_rhs_passes = calculate_progressive_actions(data_passes[data_passes['in_rhs']])
     prog_lhs_passes = calculate_progressive_actions(data_passes[data_passes['in_lhs']])
@@ -147,22 +147,8 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     if '90s' not in mins_data.columns:
         mins_data['90s'] = mins_data['Mins'] / 90
     
-    try:
-        combined_prog_df['player'] = combined_prog_df['player'].str.strip().str.upper()
-        mins_data.loc[:, 'player'] = mins_data['player'].str.strip().str.upper()
-
-# Clean team names as well for good measure
-        combined_prog_df['team'] = combined_prog_df['team'].str.strip().str.upper()
-        mins_data.loc[:, 'team'] = mins_data['team'].str.strip().str.upper()
-
-# Then perform the merge
-        combined_prog_df = pd.merge(combined_prog_df, 
-                             mins_data[['player', 'team', '90s', 'position']], 
-                             on=['player', 'team'], 
-                             how='left')
-    except Exception as e:
-        st.error(f"Error merging with minutes data: {e}")
-        return pd.DataFrame(), None, None, None, None
+    combined_prog_df = pd.merge(combined_prog_df, mins_data[['player', 'team', '90s', 'position']], 
+                                on=['player', 'team'], how='left')
     
     combined_prog_df['prog_act_HS_p90'] = combined_prog_df['prog_HS_actions'] / combined_prog_df['90s']
     combined_prog_df['prog_rhs_act_p90'] = combined_prog_df['prog_rhs_actions'] / combined_prog_df['90s']
@@ -177,7 +163,7 @@ def process_halfspace_data(data_passes, data_carries, mins_data):
     
     return combined_prog_df, prog_rhs_passes, prog_lhs_passes, prog_rhs_carries, prog_lhs_carries
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data
 def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_lhs_passes, 
                                    prog_rhs_carries, prog_lhs_carries, action_type):
     fig, ax = plt.subplots(figsize=(15, 10), facecolor='#1e1e1e')
@@ -332,7 +318,7 @@ def main():
         (data['team'].isin(selected_teams))
     ]
 
-    #st.write(f"DEBUG: Shape of filtered_data: {filtered_data.shape}") # Add check
+    st.write(f"DEBUG: Shape of filtered_data: {filtered_data.shape}") # Add check
 
     # --- Call cached functions ---
     # Need to ensure these functions are defined *before* main()
