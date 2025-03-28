@@ -344,39 +344,39 @@ def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_
     # Plot based on selected action type
     if action_type == "Right Half-Space Actions":
         pitch.lines(player_prog_rhs_passes.x, player_prog_rhs_passes.y, player_prog_rhs_passes.endX, player_prog_rhs_passes.endY,
-                    lw=3, transparent=True, comet=True, color=pass_color, ax=ax, zorder=3)
-        pitch.scatter(player_prog_rhs_passes.endX, player_prog_rhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, zorder=4)
+                    lw=3, transparent=True, comet=True, color=pass_color, ax=ax)
+        pitch.scatter(player_prog_rhs_passes.endX, player_prog_rhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, alpha=1)
         pitch.lines(player_prog_rhs_carries.x, player_prog_rhs_carries.y, player_prog_rhs_carries.endX, player_prog_rhs_carries.endY,
-                    ls='dashed', lw=2, color=carry_color, ax=ax, zorder=3)
-        pitch.scatter(player_prog_rhs_carries.endX, player_prog_rhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, zorder=4)
+                    ls='dashed', lw=2, color=carry_color, ax=ax)
+        pitch.scatter(player_prog_rhs_carries.endX, player_prog_rhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, alpha=1)
         # Title - REVERTED
         title_text = f'{player_data["player"]} - Right Half-Space Progressive Actions\nRight Half-Space Actions p90: {player_data["prog_rhs_act_p90"]:.2f}'
 
     elif action_type == "Left Half-Space Actions":
         pitch.lines(player_prog_lhs_passes.x, player_prog_lhs_passes.y, player_prog_lhs_passes.endX, player_prog_lhs_passes.endY,
-                    lw=3, transparent=True, comet=True, color=pass_color, ax=ax, zorder=3)
-        pitch.scatter(player_prog_lhs_passes.endX, player_prog_lhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, zorder=4)
+                    lw=3, transparent=True, comet=True, color=pass_color, ax=ax)
+        pitch.scatter(player_prog_lhs_passes.endX, player_prog_lhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, alpha=1)
         pitch.lines(player_prog_lhs_carries.x, player_prog_lhs_carries.y, player_prog_lhs_carries.endX, player_prog_lhs_carries.endY,
-                    ls='dashed', lw=2, color=carry_color, ax=ax, zorder=3)
-        pitch.scatter(player_prog_lhs_carries.endX, player_prog_lhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, zorder=4)
+                    ls='dashed', lw=2, color=carry_color, ax=ax)
+        pitch.scatter(player_prog_lhs_carries.endX, player_prog_lhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, alpha=1)
         # Title - REVERTED
         title_text = f'{player_data["player"]} - Left Half-Space Progressive Actions\nLeft Half-Space Actions p90: {player_data["prog_lhs_act_p90"]:.2f}'
 
     else: # "All Half-Space Actions"
         # Plot RHS
         pitch.lines(player_prog_rhs_passes.x, player_prog_rhs_passes.y, player_prog_rhs_passes.endX, player_prog_rhs_passes.endY,
-                    lw=3, transparent=True, comet=True, color=pass_color, ax=ax, zorder=3)
-        pitch.scatter(player_prog_rhs_passes.endX, player_prog_rhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, zorder=4)
+                    lw=3, transparent=True, comet=True, color=pass_color, ax=ax)
+        pitch.scatter(player_prog_rhs_passes.endX, player_prog_rhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, alpha=1)
         pitch.lines(player_prog_rhs_carries.x, player_prog_rhs_carries.y, player_prog_rhs_carries.endX, player_prog_rhs_carries.endY,
-                    ls='dashed', lw=2, color=carry_color, ax=ax, zorder=3)
-        pitch.scatter(player_prog_rhs_carries.endX, player_prog_rhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, zorder=4)
+                    ls='dashed', lw=2, color=carry_color, ax=ax)
+        pitch.scatter(player_prog_rhs_carries.endX, player_prog_rhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, alpha=1)
         # Plot LHS
         pitch.lines(player_prog_lhs_passes.x, player_prog_lhs_passes.y, player_prog_lhs_passes.endX, player_prog_lhs_passes.endY,
-                    lw=3, transparent=True, comet=True, color=pass_color, ax=ax, zorder=3)
-        pitch.scatter(player_prog_lhs_passes.endX, player_prog_lhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, zorder=4)
+                    lw=3, transparent=True, comet=True, color=pass_color, ax=ax)
+        pitch.scatter(player_prog_lhs_passes.endX, player_prog_lhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, alpha=1)
         pitch.lines(player_prog_lhs_carries.x, player_prog_lhs_carries.y, player_prog_lhs_carries.endX, player_prog_lhs_carries.endY,
-                    ls='dashed', lw=2, color=carry_color, ax=ax, zorder=3)
-        pitch.scatter(player_prog_lhs_carries.endX, player_prog_lhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, zorder=4)
+                    ls='dashed', lw=2, color=carry_color, ax=ax)
+        pitch.scatter(player_prog_lhs_carries.endX, player_prog_lhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, alpha=1)
         # Title - REVERTED
         title_text = f'{player_data["player"]} - Half-Space Progressive Actions\nTotal Half-Space Actions p90: {player_data["prog_act_HS_p90"]:.2f}'
 
