@@ -345,7 +345,7 @@ def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_
     if action_type == "Right Half-Space Actions":
         pitch.lines(player_prog_rhs_passes.x, player_prog_rhs_passes.y, player_prog_rhs_passes.endX, player_prog_rhs_passes.endY,
                     lw=4, transparent=True, comet=True, color=pass_color, ax=ax)
-        pitch.scatter(player_prog_rhs_passes.endX, player_prog_rhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, alpha=1, zorder=2)
+        pitch.scatter(player_prog_rhs_passes.endX, player_prog_rhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, zorder=2, alpha=1)
         pitch.lines(player_prog_rhs_carries.x, player_prog_rhs_carries.y, player_prog_rhs_carries.endX, player_prog_rhs_carries.endY,
                     ls='dashed', lw=3, color=carry_color, ax=ax)
         pitch.scatter(player_prog_rhs_carries.endX, player_prog_rhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, alpha=1)
@@ -355,7 +355,7 @@ def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_
     elif action_type == "Left Half-Space Actions":
         pitch.lines(player_prog_lhs_passes.x, player_prog_lhs_passes.y, player_prog_lhs_passes.endX, player_prog_lhs_passes.endY,
                     lw=4, transparent=True, comet=True, color=pass_color, ax=ax)
-        pitch.scatter(player_prog_lhs_passes.endX, player_prog_lhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, alpha=1, zorder=2)
+        pitch.scatter(player_prog_lhs_passes.endX, player_prog_lhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, zorder=2, alpha=1)
         pitch.lines(player_prog_lhs_carries.x, player_prog_lhs_carries.y, player_prog_lhs_carries.endX, player_prog_lhs_carries.endY,
                     ls='dashed', lw=3, color=carry_color, ax=ax)
         pitch.scatter(player_prog_lhs_carries.endX, player_prog_lhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, alpha=1)
@@ -366,14 +366,14 @@ def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_
         # Plot RHS
         pitch.lines(player_prog_rhs_passes.x, player_prog_rhs_passes.y, player_prog_rhs_passes.endX, player_prog_rhs_passes.endY,
                     lw=4, transparent=True, comet=True, color=pass_color, ax=ax)
-        pitch.scatter(player_prog_rhs_passes.endX, player_prog_rhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, alpha=1, zorder=2)
+        pitch.scatter(player_prog_rhs_passes.endX, player_prog_rhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, zorder=2, alpha=1)
         pitch.lines(player_prog_rhs_carries.x, player_prog_rhs_carries.y, player_prog_rhs_carries.endX, player_prog_rhs_carries.endY,
                     ls='dashed', lw=3, color=carry_color, ax=ax)
         pitch.scatter(player_prog_rhs_carries.endX, player_prog_rhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, alpha=1)
         # Plot LHS
         pitch.lines(player_prog_lhs_passes.x, player_prog_lhs_passes.y, player_prog_lhs_passes.endX, player_prog_lhs_passes.endY,
                     lw=4, transparent=True, comet=True, color=pass_color, ax=ax)
-        pitch.scatter(player_prog_lhs_passes.endX, player_prog_lhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, alpha=1, zorder=2)
+        pitch.scatter(player_prog_lhs_passes.endX, player_prog_lhs_passes.endY, s=40, c=pass_color, edgecolors='none', ax=ax, zorder=2, alpha=1)
         pitch.lines(player_prog_lhs_carries.x, player_prog_lhs_carries.y, player_prog_lhs_carries.endX, player_prog_lhs_carries.endY,
                     ls='dashed', lw=3, color=carry_color, ax=ax)
         pitch.scatter(player_prog_lhs_carries.endX, player_prog_lhs_carries.endY, s=40, c=carry_color, edgecolors='none', ax=ax, alpha=1)
