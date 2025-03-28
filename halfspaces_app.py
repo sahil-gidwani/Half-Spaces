@@ -381,8 +381,9 @@ def plot_player_halfspace_actions(player_data, player_id, prog_rhs_passes, prog_
         title_text = f'{player_data["player"]} - Half-Space Progressive Actions\nTotal Half-Space Actions p90: {player_data["prog_act_HS_p90"]:.2f}'
 
     # Apply title using Axes method for better control - REVERTED POSITIONING similar to original
-    ax.set_title(title_text, fontsize=26, color='white', fontweight='bold', pad=20) # Use pad for spacing
-
+    ax.set_title(title_text, fontsize=24, color='white', fontweight='bold', pad=20) # Use pad for spacing
+    ax.text(60, 72, 'Progressive Carries', fontsize=16, color=carry_color, ha='center', va='center', fontweight='bold')
+    ax.text(60, 69, 'Progressive Passes', fontsize=16, color=pass_color, ha='center', va='center', fontweight='bold')
     # Save plot to buffer
     buffer = io.BytesIO()
     plt.tight_layout() # Adjust layout automatically
