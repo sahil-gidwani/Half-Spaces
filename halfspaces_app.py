@@ -6,7 +6,6 @@ from mplsoccer import Pitch
 import io
 import base64
 import fsspec
-import polars as pl
 
 @st.cache_data(persist='disk')
 def load_data(data_path: str, columns=None):
@@ -91,27 +90,16 @@ def prepare_data(data):
     right_halfspace_x_min, right_halfspace_x_max = 60, 102
     right_halfspace_y_min, right_halfspace_y_max = 18, 30
     
-    data_passes['in_rhs'] = (data_passes['x'].between(right_halfspace_x_min, right_halfspace_x_max) & 
-                             data_passes['y'].between(right_halfspace_y_min, right_halfspace_y_max))
-    data_passes['in_lhs'] = (data_passes['x'].between(left_halfspace_x_min, left_halfspace_x_max) & 
-                             data_passes['y'].between(left_halfspace_y_min, left_halfspace_y_max))
-    data_passes['into_rhs'] = (data_passes['endX'].between(right_halfspace_x_min, right_halfspace_x_max) & 
-                               data_passes['endY'].between(right_halfspace_y_min, right_halfspace_y_max) & 
-                               (data_passes['in_rhs'] == False))
-    data_passes['into_lhs'] = (data_passes['endX'].between(left_halfspace_x_min, left_halfspace_x_max) & 
-                               data_passes['endY'].between(left_halfspace_y_min, left_halfspace_y_max) & 
-                               (data_passes['in_lhs'] == False))
-    
-    data_carries['in_rhs'] = (data_carries['x'].between(right_halfspace_x_min, right_halfspace_x_max) & 
-                              data_carries['y'].between(right_halfspace_y_min, right_halfspace_y_max))
-    data_carries['in_lhs'] = (data_carries['x'].between(left_halfspace_x_min, left_halfspace_x_max) & 
-                              data_carries['y'].between(left_halfspace_y_min, left_halfspace_y_max))
-    data_carries['into_rhs'] = (data_carries['endX'].between(right_halfspace_x_min, right_halfspace_x_max) & 
-                                data_carries['endY'].between(right_halfspace_y_min, right_halfspace_y_max) & 
-                                (data_carries['in_rhs'] == False))
-    data_carries['into_lhs'] = (data_carries['endX'].between(left_halfspace_x_min, left_halfspace_x_max) & 
-                                data_carries['endY'].between(left_halfspace_y_min, left_halfspace_y_max) & 
-                                (data_carries['in_lhs'] == False))
+    data_passes.loc[:, 'in_rhs'] = (data_passes['x'].between(right_halfspace_x_min, right_halfspace_x_max) & ...)
+    data_passes.loc[:, 'in_lhs'] = (data_passes['x'].between(left_halfspace_x_min, left_halfspace_x_max) & ...)
+    data_passes.loc[:, 'into_rhs'] = (data_passes['endX'].between(right_halfspace_x_min, right_halfspace_x_max) & ...)
+    data_passes.loc[:, 'into_lhs'] = (data_passes['endX'].between(left_halfspace_x_min, left_halfspace_x_max) & ...)
+
+    data_carries.loc[:, 'in_rhs'] = (data_carries['x'].between(right_halfspace_x_min, right_halfspace_x_max) & ...)
+    data_carries.loc[:, 'in_lhs'] = (data_carries['x'].between(left_halfspace_x_min, left_halfspace_x_max) & ...)
+    data_carries.loc[:, 'into_rhs'] = (data_carries['endX'].between(right_halfspace_x_min, right_halfspace_x_max) & ...)
+    data_carries.loc[:, 'into_lhs'] = (data_carries['endX'].between(left_halfspace_x_min, left_halfspace_x_max) & ...)
+
     
     return data_passes, data_carries
 
