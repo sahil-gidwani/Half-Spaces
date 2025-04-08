@@ -10,6 +10,7 @@ import base64
 import fsspec
 import pyarrow.dataset as ds # Needed for load_data_filtered
 import pyarrow as pa       # Potentially needed
+import requests
 import gc                  # For garbage collection
 
 # --- Function Definitions ---
@@ -19,17 +20,15 @@ def load_data_filtered(data_path: str, league: str, season_internal: str, column
     """Loads data filtered by league and season directly from the source."""
     # Use season_internal which should match the Parquet data format (e.g., '2324')
     try:
-        filters = (ds.field("league") == league) & (ds.field("season") == season_internal)
+        df = pd.DataFrame() # Initialize empty DataFrame
 
-        if data_path.startswith("http"):
-            fs, path = fsspec.core.url_to_fs(data_path)
-            arrow_dataset = ds.dataset(path, filesystem=fs, format="parquet")
-            table = arrow_dataset.to_table(filter=filters, columns=columns)
-            df = table.to_pandas()
-        elif data_path.endswith(".parquet"):
-             arrow_dataset = ds.dataset(data_path, format="parquet")
-             table = arrow_dataset.to_table(filter=filters, columns=columns)
-             df = table.to_pandas()
+        if data_path.endswith('.parquet'):
+            response = requests.get(data_path)
+            response.raise_for_status()
+            buffer = io.BytesIO(response.content)
+            df = pd.read_parquet(buffer, columns=columns)
+            df = df[(df["league"] == league) & (df["season"] == season_internal)]
+
         else:
             raise ValueError("Unsupported file format or path type for filtering!")
 
