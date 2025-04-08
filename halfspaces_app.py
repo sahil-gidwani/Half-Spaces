@@ -399,7 +399,7 @@ def main():
     st.set_page_config(page_title="Half-Spaces Progressive Actions", layout="wide")
 
     # --- Configuration ---
-    hf_url = "https://huggingface.co/datasets/pranavm28/Top_5_Leagues_23_24/resolve/main/Top_5_Leagues_23_24.parquet"
+    hf_url = "https://drive.google.com/file/d/1BumgdnlRLD32QSNBsGz--a2B8JBpS9bE/view?usp=sharing"
     mins_csv_path = "T5 Leagues Mins 23-24.csv"
     required_event_columns = [
         "league", "season", "gameId", "period", "minute", "second", "expandedMinute",
